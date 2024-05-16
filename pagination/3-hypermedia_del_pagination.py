@@ -63,3 +63,4 @@ class Server:
             'data': page_data,
         }
         return page_info
+# Path: pagination/3-hypermedia_del_pagination.py
