@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""Basic Flask app that implements i18n and internationalization"""
 
-from flask import Flask, render_template, request, g
-from flask_babel import Babel
+"""
+This is a basic Flask application with
+internationalization support using Flask-Babel.
+"""
+
+
+from flask import Flask, render_template, g, request
+from flask_babel import Babel, gettext
 
 app = Flask(__name__)
+babel = Babel(app)
 
+# Mock user table
 users = {
     1: {"name": "Balou", "locale": "fr", "timezone": "Europe/Paris"},
     2: {"name": "Beyonce", "locale": "en", "timezone": "US/Central"},
@@ -14,52 +21,51 @@ users = {
 }
 
 
-class Config:
-    """Config class for your application, it deals with babel mostly"""
-    LANGUAGES = ["en", "fr"]
-    BABEL_DEFAULT_LOCALE = "en"
-    BABEL_DEFAULT_TIMEZONE = "UTC"
-
-
-app.config.from_object(Config)
-babel = Babel(app)
-
-
-@babel.localeselector
-def get_locale():
-    """Get locale for your application"""
-    locale = request.args.get('locale')
-    if locale and locale in app.config['LANGUAGES']:
-        return locale
-    return request.accept_languages.best_match(app.config['LANGUAGES'])
-
-
-@app.route('/', methods=['GET'], strict_slashes=False)
-def home():
-    """Home page for your application"""
-    login = False
-    if g.get('user'):
-        login = True
-    return render_template('5-index.html', login=login)
-
-
-def get_user():
-    """Get user information from users dict"""
-    try:
-        login_as = int(request.args.get('login_as'))
-        return users.get(int(login_as))
-    except Exception:
-        return None
+def get_user(user_id):
+    """
+    Retrieve user from the mocked user table by user ID.
+    """
+    return users.get(user_id)
 
 
 @app.before_request
 def before_request():
-    """Before request"""
-    user = get_user()
-    print(user)
-    if user:
-        g.user = user
+    """
+    Set the current user to flask.g.user if user
+    ID is passed via login_as parameter.
+    """
+    user_id = request.args.get('login_as')
+    if user_id:
+        g.user = get_user(int(user_id))
+    else:
+        g.user = None
 
 
-if __name__ == "__main__":
-    app.run()
+@app.route('/')
+def index():
+    """
+    Render the index template and display
+    appropriate welcome message based on login status.
+    """
+    if g.user:
+        welcome_msg = gettext("You are logged in as %(username)s.")\
+            % {'username': g.user['name']}
+    else:
+        welcome_msg = gettext("You are not logged in.")
+    return render_template('5-index.html', welcome_msg=welcome_msg)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+# def gettext(message):
+#     """
+#     Translate a message to the current language.
+
+#     This function is used to translate
+#     messages to the appropriate language based on the current locale.
+
+#     """
+#     # Actual implementation of translation logic goes here
+#     pass
